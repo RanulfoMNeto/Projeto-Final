@@ -1,0 +1,8 @@
+/.gitignore
+/Testes
+Enunciado.pdf
+programa
+programa.o
+random.txt
+tempCodeRunnerFile.cpp
+.DS_Store
