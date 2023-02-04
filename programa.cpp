@@ -4,6 +4,7 @@
 */
 #include "libraries.h"
 #include "node.h"
+#include "cluster.h"
 #include "edge.h"
 #include "vehicle.h"
 #include "graph.h"
@@ -12,19 +13,16 @@
 
 int main() {
 
-	string fileName = "instances/bar-test";
+	string fileName = "instances/bar-n100-1";
 	// cin >> fileName;
 
 	Graph grafo;
 	readInstance(fileName, grafo);
 
 	// grafo.imprimir();
-	//grafo.imprimirClusters();
+	grafo.clustering();
+	grafo.imprimirClusters();
 	//grafo.resolve();
-
-	string solution = randomSolutionGenerator(grafo.SIZE);
-	ifstream solutionFile(solution+".txt");
-	grafo.verifySolution(solution);
 
 	return 0;
 }

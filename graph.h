@@ -1,12 +1,28 @@
 #include "libraries.h"
 
+class ClusterNotFound : public exception {
+    public:
+        virtual const char* what() const throw() { 
+            return "Custom Exception"; 
+        } 
+};
+
+bool operator<(const Cluster &c1, const Cluster &c2) {
+	return c1.time < c2.time;
+}
+
+bool operator<(const Vehicle &v1, const Vehicle &v2) {
+	return v1.t < v2.t;
+}
+
 class Graph {
 	public:
 		int SIZE, CAPACITY, ROUTE_TIME, CLUSTERS;
+		string NAME;
         vector<Node> V; // Conjunto de vértices (Coleta U Entrega U Depósito)
 		vector<Edge> A;
 		vector<Vehicle> M;
-		vector<vector<int> > clusters;
+		vector<Cluster> clusters;
 
 		Graph() {
 			CLUSTERS = 0;
@@ -14,14 +30,7 @@ class Graph {
 
         void adicionarVertice(tipo id, string lat, string lon, int dem, int etw, int ltw, int dur, tipo p, tipo d, int cluster) {
             Node vertice(id, lat, lon, dem, etw, ltw, dur, p, d, cluster);
-			while (clusters.size() <= cluster) {
-				vector<int> aux;
-				clusters.push_back(aux);
-				CLUSTERS++;
-			}
             V.push_back(vertice);
-			clusters[cluster].push_back(id); // Insere o vértice no cluster
-			// Cluster 0 -> Vértices sem cluster (pontos de coleta e origem)
         }
 
 		bool adicionarAresta(tipo uId, tipo vId, int custo) {
@@ -47,30 +56,6 @@ class Graph {
 			return false;
             
 		}
-
-		/* 
-		// Algoritmo de resolução (desenvolvimento)
-		void resolve() {
-			vector<int> trajectory;
-
-			vector<int> coleta;
-			int menor;
-			for (int m = 0; m < 1; m++) {
-				Vehicle veiculo(m);
-				M.push_back(veiculo);
-				for (int i = 0; i < clusters.size(); i++) {
-					for (int j = 0; j < clusters[i].size(); j++) {
-						coleta.push_back(searchById(clusters[i][j]).p);
-					}
-					sort(coleta.begin(), coleta.end());
-					while(!coleta.empty()) {
-						coleta.pop_back();
-					}
-
-				}
-			}
-		}
-		*/
 
 		bool verifySolution(string solutionFileName) {
 
@@ -159,6 +144,15 @@ class Graph {
 
 		}
 
+
+        Cluster& searchClusterById(int id) {
+            for (int i = 0; i < clusters.size(); i++) {
+                if (clusters[i].id == id)
+                    return clusters[i];
+            }
+            throw ClusterNotFound();
+        }
+
 		Edge& searchById(tipo u, tipo v) {
 			for (int i = 0; i < A.size(); i++)
 				if ((A[i].origem->id == u) and (A[i].destino->id == v))
@@ -173,6 +167,114 @@ class Graph {
 			return V[0]; // Retorna o depósito (padrão)
 		}
 
+		void clustering() {
+            for (int i = 0; i < V.size(); i++) {
+                try {
+                    searchClusterById(V[i].cluster).adicionaA(V[i]);
+                } catch(ClusterNotFound mce) {
+                    Cluster cluster(V[i].cluster);
+                    cluster.adicionaA(V[i]);
+                    clusters.push_back(cluster);
+                }
+            }
+        }
+
+		// Macroentrega 2 (Desconsiderar)
+		/*
+		void resolve() {
+
+			clustering();
+
+			for (int c = 0; c < clusters.size(); c++)
+				clusters[c].time = routingTime(searchById(0), clusters[c]); // routingTime(<origem>, <todos os vértices do cluster>)
+
+			sort(clusters.begin(), clusters.end());
+
+			int i = 0;
+
+			string solutionFileName = NAME+"(solution)";
+			ofstream solution(solutionFileName+".txt");
+
+			do {
+
+				M.push_back(i++);
+
+				for (int m = 0; i < M.size(); m++) {
+					M[m].trajectory.push_back(searchById(0));
+					M[m].position = searchById(0);
+				}
+
+				while (verifyAvailable()) {
+					for (int v = 0; v < M.size(); v++) {
+						Cluster *a = &closestClusterAvailable(M[v].position);
+						concatenateTrajectory(M[v].trajectory, routing(M[v].position, *a));
+						M[v].position = M[v].trajectory.back();
+						M[v].t = routingTime(M[v].trajectory);
+						a->available = false;
+						sort(M.begin(), M.end());
+					}
+				}
+				for (int v = 0; v < M.size(); v++) {
+					M[v].trajectory.push_back(searchById(0));
+					solution << M[v].id << ";";
+					for (int t = 0; t < M[v].trajectory.size(); t++) {
+						if(t == M[v].trajectory.size()-1)
+							solution << M[v].trajectory[t].id;
+						else
+							solution << M[v].trajectory[t].id << ",";
+					}
+					solution << endl;
+					M[v].t += routingTime(M[v].position, searchById(0));
+				}
+
+			} while(!verifySolution(solutionFileName));
+		}
+		
+
+		int routingTime(Node &origem, Node &destino) {
+			return 0;
+		}
+
+		int routingTime(vector<Node>& trajectory) {
+			return 0;
+		}
+
+		vector<Node> routing(Node &origem, Cluster &cluster) {
+			vector<Node> route;
+			for (int i = 0; i < cluster.vertices.size(); i++) {
+				route.push_back(*cluster.vertices[i]);
+			}
+			return route;
+		}
+
+		int routingTime(Node &origem, Cluster &cluster) {
+			// routing(origem, cluster);
+			return 0;
+		}
+
+		Cluster& closestClusterAvailable(Node &origem) {
+			for (int i = 0; i < clusters.size(); i++) {
+                if (clusters[i].available)
+                    return clusters[i];
+            }
+            throw ClusterNotFound();
+		}
+
+		void concatenateTrajectory(vector<Node>& tr1, vector<Node> tr2) {
+			for (int i = 0; i < tr2.size(); i++)
+				tr1.push_back(tr2[i]);
+		}
+		
+		bool verifyAvailable() {
+			for (int j = 0; j < clusters.size(); j++) {
+				if(clusters[j].available) {
+					return true;
+				}
+			}
+			return false;
+		}
+		*/
+
         void imprimir() {
 			for (int i = 0; i < (int)A.size(); i++) {
 				cout << "[" << A[i].origem->id << "(" << A[i].origem->timeWindow.first << ")" << "," << A[i].destino->id << "(" << A[i].destino->timeWindow.first << ")" << "]->c(" << A[i].c << ")" << endl;
@@ -180,14 +282,10 @@ class Graph {
 		}
 
 		void imprimirClusters() {
-			cout << "== " << CLUSTERS << " ==" << endl;
 			for (int i = 0; i < clusters.size(); i++) {
-				cout << "Cluster: " << i << endl;
-				for (int j = 0; j < clusters[i].size(); j++) {
-					cout << searchById(clusters[i][j]).id << endl;
+				for (int j = 0; j < clusters[i].vertices.size(); j++) {
+					cout << clusters[i].vertices[j]->id << "->" << clusters[i].vertices[j]->cluster << endl;
 				}
-				cout << endl;
 			}
 		}
-
 };

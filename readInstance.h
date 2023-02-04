@@ -83,6 +83,7 @@ void readInstance(string fileName, Graph &grafo) {
 		grafo.SIZE = SIZE;
 		grafo.CAPACITY = CAPACITY;
 		grafo.ROUTE_TIME = ROUTE_TIME;
+		grafo.NAME = NAME;
 
 		string node, info;
 
