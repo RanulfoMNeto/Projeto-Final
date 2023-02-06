@@ -6,7 +6,9 @@ class Node {
 		string lat, lon;
 		ii timeWindow;
 		int dem, dur, cluster;
-		Node();
+		Node() {
+			
+		}
         Node(tipo id, string lat, string lon, int dem, int etw, int ltw, int dur, tipo p, tipo d, int cluster) {
             this->id = id;
 			this->lat = lat;

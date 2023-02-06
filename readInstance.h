@@ -89,7 +89,7 @@ void readInstance(string fileName, Graph &grafo) {
 
 		while(getline(instance, node) && node != "EDGES") {
 			int i = 0;
-			cluster = 0;
+			cluster = -1;
 			stringstream sst(node);
 			while(getline(sst, info, ' ')) {
 				switch (i) {

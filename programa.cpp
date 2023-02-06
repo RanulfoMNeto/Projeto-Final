@@ -13,16 +13,21 @@
 
 int main() {
 
-	string fileName = "instances/bar-n100-1";
+	string fileName = "instances/bar-n100-1-c";
 	// cin >> fileName;
 
-	Graph grafo;
-	readInstance(fileName, grafo);
+	Graph graph;
+	readInstance(fileName, graph);
+	//graph.groupByCluster();
+	//graph.imprimirClusters();
 
-	// grafo.imprimir();
-	grafo.clustering();
-	grafo.imprimirClusters();
-	//grafo.resolve();
+	string solution = randomSolutionGenerator(graph.SIZE);
+	graph.verifySolution(solution);
+
+	//graph.verifySolution(graph.resolve());
+
+	//graph.imprimir();
+
 
 	return 0;
 }

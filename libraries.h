@@ -10,6 +10,7 @@
 #include <ctime>
 #include <cstdlib>
 #include <cmath>
+#include <limits>
 
 using namespace std;
 
