@@ -1,3 +1,6 @@
+### *Observação*: Repositório contendo código da Macroentrega 1 e 2.
+Caso prefira uma correção apenas com a Macroentrega 1, acesse o link do commit específico: https://github.com/RanulfoMNeto/Projeto-Final/tree/928c53e62e2d1da09121ba68c7732f3280112b2b.
+
 # Projeto Final
 
 ## Descrição do Problema
