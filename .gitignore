@@ -1,9 +1,9 @@
-.gitignore
-.vscode/
+/solutions
+/.vscode
 /Testes
-Enunciado.pdf
+/Material
+/Processo
 programa
 programa.o
-random.txt
 tempCodeRunnerFile.cpp
 .DS_Store

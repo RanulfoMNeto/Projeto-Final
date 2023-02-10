@@ -6,6 +6,7 @@ class Node {
 		string lat, lon;
 		ii timeWindow;
 		int dem, dur, cluster;
+		int distance;
 		Node() {
 			
 		}
@@ -20,6 +21,7 @@ class Node {
 			this->d = d;
 			this->cluster = cluster;
 			vehicleId = -1;
+			distance = 0;
         }
 		bool operator==(Node interseccao) {  
 			return this->id == interseccao.id;

@@ -18,15 +18,13 @@ int main() {
 
 	Graph graph;
 	readInstance(fileName, graph);
-	//graph.groupByCluster();
-	//graph.imprimirClusters();
 
-	string solution = randomSolutionGenerator(graph.SIZE);
-	graph.verifySolution(solution);
+	graph.resolve();
 
-	//graph.verifySolution(graph.resolve());
+	//cout << graph.verifySolution(name) << endl;
 
-	//graph.imprimir();
+	//graph.imprimirClustersById();
+	// graph.imprimir();
 
 
 	return 0;

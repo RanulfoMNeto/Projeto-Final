@@ -5,6 +5,7 @@ class Cluster {
     public:
         int id, time;
         bool available;
+        ii timeWindow;
 
         vector<Node*> vertices;
         void adicionaA(Node &a) {
@@ -15,5 +16,7 @@ class Cluster {
             this->id = id;
             available = true;
             time = 0;
+            timeWindow.first = numeric_limits<int>::max();
+            timeWindow.second = 0;
         }
 };
