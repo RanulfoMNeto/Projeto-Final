@@ -3,7 +3,7 @@
 class Cluster {
 
     public:
-        int id, time;
+        int id, time, dem;
         bool available;
         ii timeWindow;
 
@@ -16,6 +16,7 @@ class Cluster {
             this->id = id;
             available = true;
             time = 0;
+            dem = 0;
             timeWindow.first = numeric_limits<int>::max();
             timeWindow.second = 0;
         }

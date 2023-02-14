@@ -7,25 +7,30 @@
 #include "cluster.h"
 #include "edge.h"
 #include "vehicle.h"
+#include "kMeansClustering.h"
 #include "graph.h"
 #include "randomSolutionGenerator.h"
 #include "readInstance.h"
 
 int main() {
 
-	string fileName = "instances/bar-n100-1-c";
+	string fileName = "instances/nyc-n200-4";
 	// cin >> fileName;
+
+	int numVehicle;
 
 	Graph graph;
 	readInstance(fileName, graph);
+	bool solved;
 
-	graph.resolve();
+	do {
+		graph.clear();
+		graph.clustering();
+		solved = graph.resolve();
+	} while(!solved);
 
-	//cout << graph.verifySolution(name) << endl;
-
-	//graph.imprimirClustersById();
-	// graph.imprimir();
-
+	graph.imprimirClustersById();
+	graph.write();
 
 	return 0;
 }

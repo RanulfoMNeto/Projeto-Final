@@ -1,9 +1,9 @@
 #include "libraries.h"
 
-class ClusterNotFound : public exception {
+class EdgeNotFound : public exception {
     public:
         virtual const char* what() const throw() { 
-            return "Cluster not found"; 
+            return "Edge not found"; 
         } 
 };
 
@@ -14,6 +14,14 @@ class VehicleNotFound : public exception {
         } 
 };
 
+bool operator<(const Vehicle &v1, const Vehicle &v2) {
+	return v1.t < v2.t;
+}
+
+bool vehiclePriorityById(const Vehicle& v1, const Vehicle& v2) {
+	return v1.id < v2.id;
+}
+
 class NodeNotFound : public exception {
     public:
         virtual const char* what() const throw() { 
@@ -21,32 +29,37 @@ class NodeNotFound : public exception {
         } 
 };
 
-class EdgeNotFound : public exception {
+bool nodePriorityByDistance(const Node *n1, const Node *n2) {
+	return n1->distance < n2->distance;
+}
+
+bool nodePriorityByTimeWindow(const Node *n1, const Node *n2) {
+	return n1->timeWindow.first < n2->timeWindow.first;
+}
+
+bool nodePriorityByDemand(const Node *n1, const Node *n2) {
+	return n1->dem < n2->dem;
+}
+
+class ClusterNotFound : public exception {
     public:
         virtual const char* what() const throw() { 
-            return "Edge not found"; 
+            return "Cluster not found"; 
         } 
 };
 
-bool priorityByTimeWindow(const Cluster &c1, const Cluster &c2) {
-	return (c1.timeWindow.first) < (c2.timeWindow.first);
-}
-
-bool operator<(const Vehicle &v1, const Vehicle &v2) {
-	return v1.t < v2.t;
-}
-
-bool priorityById(const Vehicle& v1, const Vehicle& v2) {
-	return v1.id < v2.id;
+bool clusterPriorityByDemand(const Cluster &c1, const Cluster &c2) {
+	return c1.dem < c2.dem;
 }
 
 bool clusterPriorityById(const Cluster &c1, const Cluster &c2) {
 	return c1.id < c2.id;
 }
 
-bool distancePriority(const Node *n1, const Node *n2) {
-	return n1->distance < n2->distance;
+bool clusterPriorityByTimeWindow(const Cluster &c1, const Cluster &c2) {
+	return (c1.timeWindow.first) < (c2.timeWindow.first);
 }
+
 
 class Graph {
 	public:
@@ -61,8 +74,8 @@ class Graph {
 			CLUSTERS = 0;
 		}
 
-        void adicionarVertice(tipo id, string lat, string lon, int dem, int etw, int ltw, int dur, tipo p, tipo d, int cluster) {
-            Node vertice(id, lat, lon, dem, etw, ltw, dur, p, d, cluster);
+        void adicionarVertice(tipo id, string lat, string lon, int dem, int etw, int ltw, int dur, tipo p, tipo d) {
+            Node vertice(id, lat, lon, dem, etw, ltw, dur, p, d);
             V.push_back(vertice);
         }
 
@@ -224,8 +237,21 @@ class Graph {
 			//return V[u];
 			throw NodeNotFound();
 		}
+		
+		// CLUSTERING START
+
+		void clear() {
+			CLUSTERS = 0;
+			M.clear();
+			clusters.clear();
+			for (int i = 0; i < V.size(); i++)
+				V[i].cluster = -1;
+		}
 
 		void groupByCluster() {
+			clusters.clear();
+			CLUSTERS = 0;
+
             for (int i = 0; i < V.size(); i++) {
                 try {
                     searchClusterById(V[i].cluster).adicionaA(V[i]);
@@ -247,16 +273,113 @@ class Graph {
 			}
         }
 
+		void clustering() {
+			int number = 0;
+			vector<Node*> deliveryNodes = selectDeliveryNodes();
+			do {
+				number++;
+				cout << "============== " << number << " ==============" << endl;
+				cout << "============== " << number << " ==============" << endl;
+				cout << "============== " << number << " ==============" << endl;
+				cout << "============== " << number << " ==============" << endl;
+				cout << "============== " << number << " ==============" << endl;
+				cout << "============== " << number << " ==============" << endl;
+				cout << "============== " << number << " ==============" << endl;
+				cout << "============== " << number << " ==============" << endl;
+				cout << "============== " << number << " ==============" << endl;
+				cout << "============== " << number << " ==============" << endl;
+				for (int i = 0; i < V.size(); i++)
+					V[i].cluster= -1;
+				kMeansClustering(deliveryNodes, number);
+				clusters.clear();
+				groupByCluster();
+				sort(clusters.begin(), clusters.end(), clusterPriorityById);
+				for (int c = 0; c < clusters.size(); c++) {
+					int sum = 0;
+					for (int d = 0; d < clusters[c].vertices.size(); d++) {
+						sum += abs(clusters[c].vertices[d]->dem);
+					}
+					cout << clusters[c].id << "=>" << sum << endl;
+				}
+			} while(demandGreaterThan3Capacity());
+			int l = 0;
+			do {
+				cout << "=============== regroup =================" << endl;
+				cout << "================ " << l++ << " ================" << endl;
+				cout << "================================" << endl;
+				regroup();
+			} while(demandGreaterThanCapacity());
+		}
+
+		void regroup() {
+			for (int c = 0; c < clusters.size(); c++) {
+				calculateDemand();
+				if (clusters[c].dem > CAPACITY) {
+					Cluster *cluster = &clusters[c];
+					sort(clusters[c].vertices.begin(), clusters[c].vertices.end(), nodePriorityByDemand);
+					Node *higher = cluster->vertices.back();
+					bool inserted = false;
+					sort(clusters.rbegin(), clusters.rend(), clusterPriorityByDemand);
+					for (int n = 0; (n < clusters.size()) && (!inserted); n++) {
+						if ((clusters[n].dem+abs(higher->dem)) < CAPACITY) {
+							higher->cluster = clusters[n].id;
+							inserted = true;
+						}
+					}
+					if (!inserted) {
+						higher->cluster = CLUSTERS++;
+					}
+					groupByCluster();
+				}
+			}
+		}
+
+		bool demandGreaterThan3Capacity() {
+			for (int c = 0; c < clusters.size(); c++) {
+				int sum = 0;
+				for (int d = 0; d < clusters[c].vertices.size(); d++) {
+					sum += abs(clusters[c].vertices[d]->dem);
+				}
+				if (sum > 3*CAPACITY)
+					return true;
+			}
+			return false;
+		}
+
+		bool demandGreaterThanCapacity() {
+			for (int c = 0; c < clusters.size(); c++) {
+				int sum = 0;
+				for (int d = 0; d < clusters[c].vertices.size(); d++) {
+					sum += abs(clusters[c].vertices[d]->dem);
+				}
+				if (sum > CAPACITY)
+					return true;
+			}
+			return false;
+		}
+
+		void calculateDemand() {
+			for (int c = 0; c < clusters.size(); c++) {
+				clusters[c].dem = 0;
+				for (int d = 0; d < clusters[c].vertices.size(); d++) {
+					clusters[c].dem += abs(clusters[c].vertices[d]->dem);
+				}
+			}
+		}
+
+		// CLUSTERING END
+
 		// RESOLVE START
 
-		string resolve() {
-			groupByCluster();
+		bool resolve() {
 
-			sort(clusters.begin(), clusters.end(), priorityByTimeWindow);
+			sort(clusters.begin(), clusters.end(), clusterPriorityByTimeWindow);
 
 			string folder = "solutions/";
 			string solutionFileName = folder+NAME+"(solution)";
-			int m = CLUSTERS*0.23;
+			int m = 1;
+			bool solved = true;
+			cout << "CLUSTERS: " << CLUSTERS << endl;
 			do {
 				M.clear();
 				ofstream solution(solutionFileName+".txt");
@@ -283,12 +406,12 @@ class Graph {
 					M.front().t = routingTime(M.front().trajectory);
 				}
 
-				sort(M.begin(), M.end(), priorityById);
+				sort(M.begin(), M.end(), vehiclePriorityById);
 				for (int v = 0; v < M.size(); v++) {
 					M[v].trajectory.push_back(&searchById(0));
 					M[v].t = routingTime(M[v].trajectory);
 					solution << M[v].id << ";";
-					cout << M[v].id << "[" << M[v].t << "]" << endl;
+					cout << "V[" << M[v].id << "] = " << M[v].t  << endl;
 					for (int t = 0; t < M[v].trajectory.size(); t++) {
 						if(t == M[v].trajectory.size()-1)
 							solution << M[v].trajectory[t]->id;
@@ -297,8 +420,12 @@ class Graph {
 					}
 					solution << endl;
 				}
+				if (m == CLUSTERS) {
+					solved = false;
+					break;
+				}
 			} while(!verifySolution(solutionFileName));
-			return solutionFileName;
+			return solved;
 
 		}
 
@@ -323,9 +450,12 @@ class Graph {
 			for (int i = 0; i < collectionRoute.size(); i++)
 				collectionRoute[i]->distance = (searchById(collectionRoute[i]->id, collectionRoute[i]->d).c)/(searchById(origem.id, collectionRoute[i]->d).c);
 			
-			sort(collectionRoute.rbegin(), collectionRoute.rend(), distancePriority);
+			//sort(collectionRoute.begin(), collectionRoute.end(), timeWindowPriority);
+			//sort(deliveryRoute.begin(), deliveryRoute.end(), timeWindowPriority);
 			
 			concatenateTrajectory(collectionRoute, deliveryRoute);
+
+			sort(collectionRoute.begin(), collectionRoute.end(), nodePriorityByTimeWindow);
 
 			return collectionRoute;
 		}
@@ -371,6 +501,16 @@ class Graph {
 
 		// RESOLVE END
 
+		vector<Node*> selectDeliveryNodes() {
+			vector<Node*> deliveryNodes;
+			for (int i = 0; i < V.size(); i++) {
+				if (V[i].dem < 0) {
+					deliveryNodes.push_back(&V[i]);
+				}
+			}
+			return deliveryNodes;
+		}
+
         void imprimir() {
 			for (int i = 0; i < (int)A.size(); i++) {
 				cout << "[" << A[i].origem->id << "(" << A[i].origem->dur << ")" << "," << A[i].destino->id << "(" << A[i].destino->dur << ")" << "]->c(" << A[i].c << ")" << endl;
@@ -379,7 +519,7 @@ class Graph {
 		void imprimirClustersById() {
 			sort(clusters.begin(), clusters.end(), clusterPriorityById);
 			for (int i = 0; i < clusters.size(); i++) {
-				cout << "[" << clusters[i].id << "]:";
+				cout << "[" << clusters[i].id << "](" << clusters[i].dem << ")" << ":";
 				for (int j = 0; j < clusters[i].vertices.size(); j++) {
 					cout << clusters[i].vertices[j]->id << " ";
 				}
@@ -391,7 +531,7 @@ class Graph {
 				for (int j = 0; j < clusters[c].vertices.size(); j++)
 					clusters[c].timeWindow.first = (clusters[c].vertices[j]->timeWindow.first < clusters[c].timeWindow.first)?clusters[c].vertices[j]->timeWindow.first:clusters[c].timeWindow.first;
 			}
-			sort(clusters.begin(), clusters.end(), priorityByTimeWindow);
+			sort(clusters.begin(), clusters.end(), clusterPriorityByTimeWindow);
 			for (int i = 0; i < clusters.size(); i++) {
 				cout << "[" << clusters[i].id << "](" << clusters[i].timeWindow.first << "):";
 				for (int j = 0; j < clusters[i].vertices.size(); j++) {
@@ -399,5 +539,12 @@ class Graph {
 				}
 				cout << endl;
 			}
+		}
+
+		void write() {
+			ofstream output("outputs/"+NAME+"(output).csv");
+			output << "id,latitude,longitude,cluster,vehicle" << endl;
+			for (int i = 0; i < V.size(); i++)
+				output << V[i].id << "," << V[i].lat << "," << V[i].lon << "," << V[i].cluster << "," << V[i].vehicleId << endl;
 		}
 };
