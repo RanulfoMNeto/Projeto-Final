@@ -89,7 +89,6 @@ void readInstance(string fileName, Graph &grafo) {
 
 		while(getline(instance, node) && node != "EDGES") {
 			int i = 0;
-			cluster = -1;
 			stringstream sst(node);
 			while(getline(sst, info, ' ')) {
 				switch (i) {
@@ -102,11 +101,10 @@ void readInstance(string fileName, Graph &grafo) {
 					case 6: dur = stoi(info);break;
 					case 7: p = stoi(info);break;
 					case 8: d = stoi(info);break;
-					case 9: cluster = stoi(info);break;
 				}
 				i++;
 			}
-			grafo.adicionarVertice(id, lat, lon, dem, etw, ltw, dur, p, d, cluster);
+			grafo.adicionarVertice(id, lat, lon, dem, etw, ltw, dur, p, d);
 		}
 
 		string edge;
