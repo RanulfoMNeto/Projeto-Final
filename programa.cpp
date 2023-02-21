@@ -8,29 +8,28 @@
 #include "edge.h"
 #include "vehicle.h"
 #include "kMeansClustering.h"
+//#include "kMeansClusteringKaggle.h"
 #include "graph.h"
 #include "randomSolutionGenerator.h"
 #include "readInstance.h"
+#include "instance.h"
 
 int main() {
 
-	string fileName = "instances/nyc-n200-4";
-	// cin >> fileName;
-
-	int numVehicle;
-
+	string fileName = "instances/bar-n100-1";
 	Graph graph;
+
 	readInstance(fileName, graph);
-	bool solved;
 
-	do {
-		graph.clear();
-		graph.clustering();
-		solved = graph.resolve();
-	} while(!solved);
+	int number;
+	cout << "Number of clusters: ";
+	cin >> number;
+	
+	cout << "Clustering..." << endl;
+	graph.clustering(number);
 
-	graph.imprimirClustersById();
-	graph.write();
+	cout << "Solving..." << endl;
+	cout << "Solved: " << graph.solve() << endl;	
 
 	return 0;
 }
