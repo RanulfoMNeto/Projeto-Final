@@ -4,7 +4,7 @@ class Cluster {
 
     public:
         int id, time, dem;
-        bool available;
+        bool available, visited;
         ii timeWindow;
 
         vector<Node*> vertices;
@@ -15,6 +15,7 @@ class Cluster {
         Cluster(int id) {
             this->id = id;
             available = true;
+            visited = false;
             time = 0;
             dem = 0;
             timeWindow.first = numeric_limits<int>::max();

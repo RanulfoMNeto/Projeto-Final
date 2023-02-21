@@ -1,5 +1,10 @@
 #include "libraries.h"
 
+/*
+    Algoritmo baseado na implementação desenvolvida por Robert Andrew Martin de Reasonable Deviations.
+    Implementing k-means clustering from scratch in C++: https://reasonabledeviations.com/2019/10/02/k-means-in-cpp/
+*/
+
 using namespace std;
 
 int myrandom2 (int i) { return rand()%i;} 
@@ -61,15 +66,5 @@ void kMeansClustering(vector<Node*> &points, int k) {
         c->lat = sumX[clusterId] / nPoints[clusterId];
         c->lat = sumY[clusterId] / nPoints[clusterId];
     }
-    /*
-    ofstream myfile;
-    myfile.open("output.csv");
 
-    myfile << "latitude,longitude,cluster" << endl;
-
-    for (vector<Node*>::iterator it = points.begin(); it != points.end(); ++it) {
-        myfile << (*it)->id << "," << (*it)->lat << "," << (*it)->lon << "," << (*it)->cluster << endl;
-    }
-    myfile.close();
-    */
 }

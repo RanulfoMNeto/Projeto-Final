@@ -8,6 +8,7 @@ class Node {
 		int dem, dur, cluster;
 		int distance;
 		double minDist;  // default infinite dist to nearest cluster
+		bool visited, inserted;
 		Node() {
 			
 		}
@@ -24,6 +25,8 @@ class Node {
 			vehicleId = -1;
 			distance = 0;
 			minDist = numeric_limits<double>::max();
+			visited = false;
+			inserted = false;
         }
 		bool operator==(Node interseccao) {  
 			return this->id == interseccao.id;
