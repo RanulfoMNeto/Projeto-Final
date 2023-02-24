@@ -16,13 +16,22 @@
 
 int main() {
 
-	string fileName = "instances/bar-n100-1";
+	string fileName = "instances/";
 	Graph graph;
 
+	string instanceName;
+	cout << "Instance name: ";
+	cin >> instanceName;
+
+	fileName += instanceName;
+
+	cout << "Reading..." << endl;
 	readInstance(fileName, graph);
-	int number = 7;
+
+	int number;
 	cout << "Number of cluster: ";
-	//cin >> number;
+	cin >> number;
+
 	cout << "Clustering..." << endl;
 	graph.clustering(number);
 
