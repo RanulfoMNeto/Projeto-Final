@@ -275,53 +275,14 @@ class Graph {
 					}
                 }
             }
-			for (int c = 0; c < clusters.size(); c++) {
-				for (int i = 0; i < clusters[c].vertices.size(); i++) {
-					clusters[c].timeWindow.first = (clusters[c].vertices[i]->timeWindow.first < clusters[c].timeWindow.first)?clusters[c].vertices[i]->timeWindow.first:clusters[c].timeWindow.first;
 
-					clusters[c].timeWindow.second = (clusters[c].vertices[i]->timeWindow.second > clusters[c].timeWindow.second)?clusters[c].vertices[i]->timeWindow.second:clusters[c].timeWindow.second;
-				}
-			}
         }
 
 		void clustering(int number) {
 			vector<Node*> deliveryNodes = selectDeliveryNodes();
 			kMeansClustering(deliveryNodes, number);
+			//insertCluster();
 			groupByCluster();
-		}
-
-		bool demandGreaterThan3Capacity() {
-			cout << "==============" << endl;
-			cout << "demandGreaterThan3Capacity" << endl;
-			cout << "==============" << endl;
-			for (int c = 0; c < clusters.size(); c++) {
-				cout << clusters[c].id << ":";
-				int sum = 0;
-				for (int d = 0; d < clusters[c].vertices.size(); d++) {
-					sum += abs(clusters[c].vertices[d]->dem);
-				}
-				cout << sum << endl;
-				if (sum > 3*CAPACITY)
-					return true;
-			}
-			return false;
-		}
-
-		bool demandGreaterThanCapacity() {
-			cout << "==============" << endl;
-			cout << "demandGreaterThanCapacity" << endl;
-			cout << "==============" << endl;
-			for (int c = 0; c < clusters.size(); c++) {
-				cout << clusters[c].id << ":";
-				int sum = 0;
-				for (int d = 0; d < clusters[c].vertices.size(); d++) {
-					sum += abs(clusters[c].vertices[d]->dem);
-				}
-				cout << sum << endl;
-				if (sum > CAPACITY)
-					return true;
-			}
-			return false;
 		}
 
 		// CLUSTERING END
@@ -380,6 +341,49 @@ class Graph {
 			return true;
 		}
 
+		bool verifyTrajectoryWithoutPrint(vector<Node*> trajectory) {
+
+			Vehicle vehicle(0); // tester vehicle
+
+			for (int i = 0; i < trajectory.size(); i++)
+				trajectory[i]->vehicleId = -1;
+
+			for (int i = 0; i < trajectory.size(); i++) {
+				//cout << "{" << trajectory[i]->id << "}" << endl;
+				if (trajectory[i]->id != 0) { // Vértice não é o depósito
+					if (trajectory[i]->vehicleId != -1)
+						throw ImpossibleTrajectory((char *)"verifyTrajectory: 4. Exclusividade de visita");
+					trajectory[i]->vehicleId = vehicle.id;
+
+					if (trajectory[i]->dem < 0) {
+						if (trajectory[i]->vehicleId != searchById(trajectory[i]->p).vehicleId)
+							throw ImpossibleTrajectory((char *)"verifyTrajectory: 5. Atendimento de pedido; 1. Precedência de coleta e entrega");
+					}
+				}
+
+				if (vehicle.t > trajectory[i]->timeWindow.second)
+					throw ImpossibleTrajectory((char *) "verifyTrajectory: 3. Janelas de tempo");
+				if (vehicle.t < trajectory[i]->timeWindow.first)
+					vehicle.t += (trajectory[i]->timeWindow.first - vehicle.t);
+				int duracao = trajectory[i]->dur;
+				int custo = 0;
+				if (i < (trajectory.size()-1)) {
+					Edge aresta = searchById(trajectory[i]->id, trajectory[i+1]->id);
+					custo = aresta.c;
+				}
+				
+				if ((vehicle.t += duracao + custo) > ROUTE_TIME)
+					throw ImpossibleTrajectory((char *)"verifyTrajectory: 2. Horário de serviço");
+
+				if ((vehicle.q += trajectory[i]->dem) > CAPACITY)
+					throw ImpossibleTrajectory((char *)"verifyTrajectory: 6. Capacidade do veículo");
+
+			}
+			//cout << endl;
+			return true;
+		}
+
+
 		// RESOLVE START
 
 		bool solve() {
@@ -404,33 +408,29 @@ class Graph {
 				M.back().trajectory.push_back(&searchById(0));
 				M.back().position = &searchById(0);
 				M.back().t = 0;
-				sort(M.begin(), M.end(), vehiclePriorityByTime);
-
+				//sort(M.begin(), M.end(), vehiclePriorityByTime);
 				Vehicle *vehicle = &M.back();
+				cout << "V[" << vehicle->id << "] ";
 
 				while (verifyUnvisitedCluster()) {
 
+
 					Cluster *cluster = &nearestUnvisitedAvailableCluster(*vehicle->position);
-					printClustersById();
 					cluster->visited = true;
 					vector<Node*> trajectory = vehicle->trajectory;
 
-					sort(cluster->vertices.begin(), cluster->vertices.end(), nodePriorityByTimeWindow);
 					for (int v = 0; v < cluster->vertices.size(); v++) {
 						if (cluster->vertices[v]->visited == false) {
 							cluster->vertices[v]->visited = true;
 							trajectory.push_back(&searchById(0));
 							nearestInsertion(trajectory, *cluster->vertices[v]);
-							//trajectory.push_back(&searchById(cluster->vertices[v]->p)); // Ponto de coleta
-							//trajectory.push_back(cluster->vertices[v]); // Ponto de entrega
-							
+
 							try {
 								//trajectory.push_back(&searchById(0));//
-								verifyTrajectory(trajectory);
+								verifyTrajectoryWithoutPrint(trajectory);
 								trajectory.pop_back();
 								vehicle->trajectory = trajectory;
 								cluster->vertices[v]->inserted = true;
-
 								vehicle->position = vehicle->trajectory.back();
 							} catch (ImpossibleTrajectory it) {
 								cluster->vertices[v]->inserted = false;
@@ -441,7 +441,6 @@ class Graph {
 					}
 					
 					cluster->available = availability(*cluster);
-					verifyTrajectory(vehicle->trajectory);
 
 				}
 				vehicle->trajectory.push_back(&searchById(0));
@@ -455,7 +454,7 @@ class Graph {
 						}
 					}
 				}
-
+				cout << "✓" << endl;
 			}
 			string solutionFileName = writeSolution();
 			return verifySolution(solutionFileName);
@@ -557,7 +556,7 @@ class Graph {
 					int shorter = numeric_limits<int>::max();
 					for (int j = 0; j < clusters[c].vertices.size(); j++) {
 						int time = routingTime(searchById(origem.id), searchById(clusters[c].vertices[j]->p));
-						shorter = (time<shorter)?time:shorter;
+						shorter = (time < shorter)?time:shorter;
             		}
 					if (shorter < nearest.second) {
 						nearest.first = clusters[c].id;
@@ -674,6 +673,14 @@ class Graph {
 				total += vehicleRoutingTime;
 			}
 			cout << "Total: " << total << endl << endl;
+		}
+
+		void myMaps() {
+			ofstream output(NAME+"(output).csv");
+			output << "id,lat,long,dem,p,cluster" << endl;
+			for (int i = 0; i < V.size(); i++) {
+				output << V[i].id << "," << V[i].lat << "," << V[i].lon << "," << V[i].dem << "," << V[i].p << "," << V[i].cluster << endl;
+			}
 		}
 
 };

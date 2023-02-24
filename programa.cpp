@@ -20,16 +20,16 @@ int main() {
 	Graph graph;
 
 	readInstance(fileName, graph);
-
-	int number;
-	cout << "Number of clusters: ";
-	cin >> number;
-	
+	int number = 7;
+	cout << "Number of cluster: ";
+	//cin >> number;
 	cout << "Clustering..." << endl;
 	graph.clustering(number);
 
 	cout << "Solving..." << endl;
-	cout << "Solved: " << graph.solve() << endl;	
+	graph.solve();
+
+	//graph.myMaps();
 
 	return 0;
 }
