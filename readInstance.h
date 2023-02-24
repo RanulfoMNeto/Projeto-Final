@@ -108,7 +108,8 @@ void readInstance(string fileName, Graph &grafo) {
 			}
 			grafo.addNode(id, lat, lon, dem, etw, ltw, dur, p, d);
 		}
-
+		grafo.AM = vector<vector<int> >(SIZE, vector<int>(SIZE, 0));
+		
 		string edge;
 		int u = 0;
 		while(getline(instance, edge) && edge != "EOF") {
@@ -116,6 +117,7 @@ void readInstance(string fileName, Graph &grafo) {
 			stringstream sst(edge);
 			string custo;
 			while(getline(sst, custo, ' ')) {
+				grafo.AM[u][v] = stoi(custo);
 				grafo.addEdge(u, v, stoi(custo));
 				v++;
 			}

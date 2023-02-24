@@ -83,6 +83,7 @@ class Graph {
 		vector<Edge> A;
 		vector<Vehicle> M;
 		vector<Cluster> clusters;
+		vector<vector<int> > AM;
 
 		Graph() {
 			CLUSTERS = 0;
@@ -93,28 +94,9 @@ class Graph {
             V.push_back(vertice);
         }
 
-		bool addEdge(tipo uId, tipo vId, int custo) {
-            Node *u;
-            Node *v;
-			bool uE = false;
-			bool vE = false;
-            for (int i = 0; i < (int)V.size(); i++) {
-				if (V[i].id == uId) {
-					u = &V[i];
-					uE = true;
-				}
-				if (V[i].id == vId) {
-					v = &V[i];
-					vE = true;
-				}
-				if (uE && vE) {
-					Edge aresta(*u, *v, custo);
-            		A.push_back(aresta);
-					return true;
-				}
-            }
-			return false;
-            
+		void addEdge(tipo u, tipo v, int custo) {
+			Edge aresta(searchById(u), searchById(v), custo);
+			A.push_back(aresta);
 		}
 
 		bool verifySolution(string solutionFileName) {
@@ -192,8 +174,9 @@ class Graph {
 					int duracao = cliente->dur;
 					int custo = 0;
 					if (i < (sequence.size()-1)) {
-						Edge aresta = searchById(sequence[i], sequence[i+1]);
-						custo = aresta.c;
+						//Edge aresta = searchById(sequence[i], sequence[i+1]);
+						//custo = aresta.c;
+						custo = AM[sequence[i]][sequence[i+1]];
 					}
 
 					cout << "Horário de serviço: ";
@@ -248,12 +231,12 @@ class Graph {
 		}
 
 		Node& searchById(tipo u) {
+			/*
 			for (int i = 0; i < V.size(); i++)
 				if (V[i].id == u)
 					return V[i];
-
-			//return V[u];
-			//cout << "Node: " << u << endl;
+			*/
+			return V[u];
 			throw NodeNotFound();
 		}
 		
@@ -291,60 +274,6 @@ class Graph {
 
 			Vehicle vehicle(0); // tester vehicle
 
-			for (int i = 0; i < M.size(); i++)
-				M[i].t = 0;
-
-			for (int i = 0; i < trajectory.size(); i++)
-				trajectory[i]->vehicleId = -1;
-
-			for (int i = 0; i < trajectory.size(); i++) {
-				cout << "{" << trajectory[i]->id << "}" << endl;
-				if (trajectory[i]->id != 0) { // Vértice não é o depósito
-					if (trajectory[i]->vehicleId != -1)
-						throw ImpossibleTrajectory((char *)"verifyTrajectory: 4. Exclusividade de visita");
-					trajectory[i]->vehicleId = vehicle.id;
-
-					if (trajectory[i]->dem < 0) {
-						if (trajectory[i]->vehicleId != searchById(trajectory[i]->p).vehicleId)
-							throw ImpossibleTrajectory((char *)"verifyTrajectory: 5. Atendimento de pedido; 1. Precedência de coleta e entrega");
-					}
-				}
-
-				// ========
-
-				for (int j = 0; j < trajectory.size(); j++)
-					cout << trajectory[j]->id << "|" << trajectory[j]->vehicleId << endl;
-				cout << endl;
-				cout << "(" << vehicle.t << ")Janelas de tempo: v->" << trajectory[i]->vehicleId;
-				cout << endl << "[" << trajectory[i]->timeWindow.first << "," << trajectory[i]->timeWindow.second << "]:";
-				// 3. Janelas de tempo
-				if (vehicle.t > trajectory[i]->timeWindow.second)
-					throw ImpossibleTrajectory((char *) "verifyTrajectory: 3. Janelas de tempo");
-				cout << "✓" << endl << endl;
-				if (vehicle.t < trajectory[i]->timeWindow.first)
-					vehicle.t += (trajectory[i]->timeWindow.first - vehicle.t);
-				int duracao = trajectory[i]->dur;
-				int custo = 0;
-				if (i < (trajectory.size()-1)) {
-					Edge aresta = searchById(trajectory[i]->id, trajectory[i+1]->id);
-					custo = aresta.c;
-				}
-				
-				if ((vehicle.t += duracao + custo) > ROUTE_TIME)
-					throw ImpossibleTrajectory((char *)"verifyTrajectory: 2. Horário de serviço");
-
-				if ((vehicle.q += trajectory[i]->dem) > CAPACITY)
-					throw ImpossibleTrajectory((char *)"verifyTrajectory: 6. Capacidade do veículo");
-
-			}
-			cout << endl;
-			return true;
-		}
-
-		bool verifyTrajectoryWithoutPrint(vector<Node*> trajectory) {
-
-			Vehicle vehicle(0); // tester vehicle
-
 			for (int i = 0; i < trajectory.size(); i++)
 				trajectory[i]->vehicleId = -1;
 
@@ -368,8 +297,7 @@ class Graph {
 				int duracao = trajectory[i]->dur;
 				int custo = 0;
 				if (i < (trajectory.size()-1)) {
-					Edge aresta = searchById(trajectory[i]->id, trajectory[i+1]->id);
-					custo = aresta.c;
+					custo = AM[trajectory[i]->id][trajectory[i+1]->id];
 				}
 				
 				if ((vehicle.t += duracao + custo) > ROUTE_TIME)
@@ -384,7 +312,7 @@ class Graph {
 		}
 
 
-		// RESOLVE START
+		// SOLVE START
 
 		bool solve() {
 
@@ -410,24 +338,22 @@ class Graph {
 				M.back().t = 0;
 				//sort(M.begin(), M.end(), vehiclePriorityByTime);
 				Vehicle *vehicle = &M.back();
-				cout << "V[" << vehicle->id << "] ";
 
 				while (verifyUnvisitedCluster()) {
-
 
 					Cluster *cluster = &nearestUnvisitedAvailableCluster(*vehicle->position);
 					cluster->visited = true;
 					vector<Node*> trajectory = vehicle->trajectory;
 
+					sort(cluster->vertices.begin(), cluster->vertices.end(), nodePriorityByTimeWindow);
 					for (int v = 0; v < cluster->vertices.size(); v++) {
 						if (cluster->vertices[v]->visited == false) {
 							cluster->vertices[v]->visited = true;
 							trajectory.push_back(&searchById(0));
 							nearestInsertion(trajectory, *cluster->vertices[v]);
-
 							try {
 								//trajectory.push_back(&searchById(0));//
-								verifyTrajectoryWithoutPrint(trajectory);
+								verifyTrajectory(trajectory);
 								trajectory.pop_back();
 								vehicle->trajectory = trajectory;
 								cluster->vertices[v]->inserted = true;
@@ -454,15 +380,14 @@ class Graph {
 						}
 					}
 				}
-				cout << "✓" << endl;
 			}
-			string solutionFileName = writeSolution();
+			string solutionFileName = writeSolution("(solution)");
 			return verifySolution(solutionFileName);
 		}
 
 		// ====================
 		
-		// FUNCTIONS FOR RESOLVE
+		// FUNCTIONS FOR SOLVE
 
 		void nearestInsertion(vector<Node*> &trajectory, Node &delivery) {
 
@@ -475,9 +400,9 @@ class Graph {
 			pair<int, int> minPickup = make_pair(numeric_limits<int>::max(), 0);
 			for (int i = 0; i < trajectory.size(); i++) {
 				if (i < trajectory.size()-1) {
-					int Dij = searchById(trajectory[i]->id, pickup->id).c;
-					int Djk = searchById(pickup->id, trajectory[i+1]->id).c;
-					int Dik = searchById(trajectory[i]->id, trajectory[i+1]->id).c;
+					int Dij = AM[trajectory[i]->id][pickup->id];
+					int Djk = AM[pickup->id][trajectory[i+1]->id];
+					int Dik = AM[trajectory[i]->id][trajectory[i+1]->id];
 					if ((Dij + Djk - Dik) < minPickup.first) {
 						minPickup.first = Dij + Djk - Dik;
 						minPickup.second = i+1;
@@ -489,10 +414,9 @@ class Graph {
 			pair<int, int> minDelivery = make_pair(numeric_limits<int>::max(), 0);
 			for (int i = minPickup.second; i < trajectory.size(); i++) {
 				if (i < trajectory.size()-1) {
-					int Dij = searchById(trajectory[i]->id, delivery.id).c;
-					int Djk = searchById(delivery.id, trajectory[i+1]->id).c;
-					int Dik = searchById(trajectory[i]->id, trajectory[i+1]->id).c;
-
+					int Dij = AM[trajectory[i]->id][delivery.id];
+					int Djk = AM[delivery.id][trajectory[i+1]->id];
+					int Dik = AM[trajectory[i]->id][trajectory[i+1]->id];
 					if ((Dij + Djk - Dik) < minDelivery.first) {
 						minDelivery.first = Dij + Djk - Dik;
 						minDelivery.second = i+1;
@@ -503,7 +427,8 @@ class Graph {
 		}
 
 		int routingTime(Node &origem, Node &destino) {
-			return searchById(origem.id, destino.id).c;
+			//return searchById(origem.id, destino.id).c;
+			return AM[origem.id][destino.id];
 		}
 
 		int routingTime(vector<Node*>& trajectory) {
@@ -514,8 +439,9 @@ class Graph {
 				int duracao = trajectory[i]->dur;
 				int custo = 0;
 				if (i < (trajectory.size()-1)) {
-					Edge aresta = searchById(trajectory[i]->id, trajectory[i+1]->id);
-					custo = aresta.c;
+					//Edge aresta = searchById(trajectory[i]->id, trajectory[i+1]->id);
+					//custo = aresta.c;
+					custo = AM[trajectory[i]->id][trajectory[i+1]->id];
 				}
 				vehicle.t += duracao + custo;
 			}
@@ -585,19 +511,6 @@ class Graph {
 			return false;
 		}
 
-		bool verifyUnvisitedAvailableCluster() {
-			for (int c = 0; c < clusters.size(); c++) {
-				if (clusters[c].available == true) {
-					for (int v = 0; v < clusters[c].vertices.size(); v++) {
-						if (clusters[c].vertices[v]->visited == false) {
-							return true;
-						}
-					}
-				}
-			}
-			return false;
-		}
-
 		bool availability(Cluster &cluster) {
 			for (int v = 0; v < cluster.vertices.size(); v++) {
 				if (cluster.vertices[v]->inserted == false) {
@@ -607,8 +520,8 @@ class Graph {
 			return false;
 		}
 
-		string writeSolution() {
-			string fileName = "solutions/"+NAME+"(solution)";
+		string writeSolution(string ext) {
+			string fileName = "solutions/"+NAME+ext;
 			ofstream solution(fileName+".txt");
 			for (int m = 0; m < M.size(); m++) {
 				solution << M[m].id << ";";
@@ -632,7 +545,7 @@ class Graph {
 
 		// ====================
 
-		// RESOLVE END
+		// SOLVE END
 
         void print() {
 			for (int i = 0; i < (int)A.size(); i++) {
