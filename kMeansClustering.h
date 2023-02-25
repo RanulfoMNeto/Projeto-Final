@@ -7,22 +7,19 @@
 
 using namespace std;
 
-int myrandom2 (int i) { return rand()%i;} 
-
 void kMeansClustering(vector<Node*> &points, int k) {
     int n = points.size(); // the number of nodes
     vector<int> rdm;
     srand(time(0));  // need to set the random seed
     for (int i = 0; i < n; i++)
         rdm.push_back(i);
-    random_shuffle(rdm.begin(), rdm.end(), myrandom2);
+    random_shuffle(rdm.begin(), rdm.end(), myrandom);
     vector<Node> centroids;
     for (int i = 0; i < k; ++i) {
         centroids.push_back(*points[rdm.back()]);
         //cout << rdm.back() << "->" << points[rdm.back()]->id << endl;
         rdm.pop_back();
     }
-    int cot = 0;
     for (vector<Node>::iterator c = begin(centroids); c != end(centroids); ++c) {
         // quick hack to get cluster index
         int clusterId = c - begin(centroids);

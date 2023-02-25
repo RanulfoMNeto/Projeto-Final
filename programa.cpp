@@ -7,10 +7,9 @@
 #include "cluster.h"
 #include "edge.h"
 #include "vehicle.h"
-#include "kMeansClustering.h"
-//#include "kMeansClusteringKaggle.h"
-#include "graph.h"
 #include "randomSolutionGenerator.h"
+#include "kMeansClustering.h"
+#include "graph.h"
 #include "readInstance.h"
 #include "instance.h"
 
@@ -20,7 +19,7 @@ int main() {
 	Graph graph;
 
 	string instanceName;
-	cout << "Instance name: ";
+	cout << "Instance name: " << fileName;
 	cin >> instanceName;
 
 	fileName += instanceName;
@@ -28,9 +27,11 @@ int main() {
 	cout << "Reading..." << endl;
 	readInstance(fileName, graph);
 
-	int number;
-	cout << "Number of cluster: ";
-	cin >> number;
+	int number = numeric_limits<int>::max();
+	while(number > (graph.SIZE/2)) {
+		cout << "Number of cluster (1 at |V|/2): ";
+		cin >> number;
+	}
 
 	cout << "Clustering..." << endl;
 	graph.clustering(number);
@@ -38,7 +39,7 @@ int main() {
 	cout << "Solving..." << endl;
 	graph.solve();
 
-	//graph.myMaps();
+	graph.myMaps();
 
 	return 0;
 }
