@@ -351,6 +351,7 @@ class Graph {
 							nearestInsertion(trajectory, *cluster->vertices[v]);
 							try {
 								verifyTrajectory(trajectory);
+								swapOpt(trajectory);
 								twoOpt(trajectory);
 								trajectory.pop_back();
 								vehicle->trajectory = trajectory;
@@ -523,15 +524,31 @@ class Graph {
 		void twoOpt(vector<Node*> &trajectory) {
 			vector<Node*> copy = trajectory;
 			for (int i = 1; i < trajectory.size(); i++) {
-				bool brk = false;
 				for (int j = i; j < trajectory.size()-1; j++) {
 					reverse(copy.begin()+i, copy.begin()+j);
 					try {
 						verifyTrajectory(copy);
 						if (routingTime(copy) < routingTime(trajectory)) {
 							trajectory = copy;
-							i = 1;
-							break;
+						} else {
+							copy = trajectory;
+						}
+					} catch(ImpossibleTrajectory it) {
+						copy = trajectory;
+					}
+				}
+			}
+		}
+
+		void swapOpt(vector<Node*> &trajectory) {
+			vector<Node*> copy = trajectory;
+			for (int i = 1; i < trajectory.size(); i++) {
+				for (int j = i; j < trajectory.size()-1; j++) {
+					iter_swap(copy.begin()+i, copy.begin()+j);
+					try {
+						verifyTrajectory(copy);
+						if (routingTime(copy) < routingTime(trajectory)) {
+							trajectory = copy;
 						} else {
 							copy = trajectory;
 						}
