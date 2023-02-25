@@ -264,7 +264,6 @@ class Graph {
 		void clustering(int number) {
 			vector<Node*> deliveryNodes = selectDeliveryNodes();
 			kMeansClustering(deliveryNodes, number);
-			//insertCluster();
 			groupByCluster();
 		}
 
@@ -345,15 +344,14 @@ class Graph {
 					cluster->visited = true;
 					vector<Node*> trajectory = vehicle->trajectory;
 
-					sort(cluster->vertices.begin(), cluster->vertices.end(), nodePriorityByTimeWindow);
 					for (int v = 0; v < cluster->vertices.size(); v++) {
 						if (cluster->vertices[v]->visited == false) {
 							cluster->vertices[v]->visited = true;
 							trajectory.push_back(&searchById(0));
 							nearestInsertion(trajectory, *cluster->vertices[v]);
 							try {
-								//trajectory.push_back(&searchById(0));//
 								verifyTrajectory(trajectory);
+								twoOpt(trajectory);
 								trajectory.pop_back();
 								vehicle->trajectory = trajectory;
 								cluster->vertices[v]->inserted = true;
@@ -450,29 +448,6 @@ class Graph {
 
 		}
 
-		Node* nearestNodeUnvisited(vector<Node*> nodes, Vehicle &vehicle) { // UNUSED FUNCTION
-			Node *origem = vehicle.position;
-			Node* nearestNode;
-			double shorter = numeric_limits<double>::max();
-			for (int i = 0; i < nodes.size(); i++) {
-				if (!nodes[i]->visited) {
-					int elapsedTime = vehicle.t;
-					int timeWindowFirst = nodes[i]->timeWindow.first;
-					int time = searchById(origem->id, nodes[i]->id).c;
-					//int value = timeWindowFirst-(time+elapsedTime);
-					int value = timeWindowFirst;
-					//cout << nodes[i]->id << " : " << timeWindowFirst << "-(" << time << "+" << elapsedTime << ")=" << value << endl;
-					if (value < shorter) {
-						shorter = value;
-						nearestNode = nodes[i];
-					}
-				}
-			}
-			vehicle.t += (searchById(origem->id, nearestNode->id).c + nearestNode->dur);
-			//cout << endl << "Menor Destino: " << nearestNode->id << "[" << shorter << "]" << endl << endl;
-			return nearestNode;
-		}
-
 		Cluster& nearestUnvisitedAvailableCluster(Node &origem) {
 			int c;
 			pair<int,int> nearest; // <cluster, shorter>
@@ -541,6 +516,30 @@ class Graph {
 				}
 			}
 			return deliveryNodes;
+		}
+
+		// OPTIMIZATION ALGORITHM
+
+		void twoOpt(vector<Node*> &trajectory) {
+			vector<Node*> copy = trajectory;
+			for (int i = 1; i < trajectory.size(); i++) {
+				bool brk = false;
+				for (int j = i; j < trajectory.size()-1; j++) {
+					reverse(copy.begin()+i, copy.begin()+j);
+					try {
+						verifyTrajectory(copy);
+						if (routingTime(copy) < routingTime(trajectory)) {
+							trajectory = copy;
+							i = 1;
+							break;
+						} else {
+							copy = trajectory;
+						}
+					} catch(ImpossibleTrajectory it) {
+						copy = trajectory;
+					}
+				}
+			}
 		}
 
 		// ====================
