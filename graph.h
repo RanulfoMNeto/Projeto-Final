@@ -335,37 +335,40 @@ class Graph {
 				M.back().trajectory.push_back(&searchById(0));
 				M.back().position = &searchById(0);
 				M.back().t = 0;
-				//sort(M.begin(), M.end(), vehiclePriorityByTime);
+
 				Vehicle *vehicle = &M.back();
 
 				while (verifyUnvisitedCluster()) {
 
-					Cluster *cluster = &nearestUnvisitedAvailableCluster(*vehicle->position);
-					cluster->visited = true;
-					vector<Node*> trajectory = vehicle->trajectory;
+					for (int i = 0; i < clusters.size(); i++) {
+						//Cluster *cluster = &nearestUnvisitedAvailableCluster(*vehicle->position);
+						Cluster *cluster = &clusters[i];
+						cluster->visited = true;
+						vector<Node*> trajectory = vehicle->trajectory;
+						//sort(cluster->vertices.begin(), cluster->vertices.end(), nodePriorityByTimeWindow);
+						for (int v = 0; v < cluster->vertices.size(); v++) {
+							if (cluster->vertices[v]->visited == false) {
+								cluster->vertices[v]->visited = true;
+								trajectory.push_back(&searchById(0));
+								nearestInsertion(trajectory, *cluster->vertices[v]);
+								try {
+									verifyTrajectory(trajectory);
+									swapOpt(trajectory);
+									twoOpt(trajectory);
+									trajectory.pop_back();
+									vehicle->trajectory = trajectory;
+									cluster->vertices[v]->inserted = true;
+									vehicle->position = vehicle->trajectory.back();
+								} catch (ImpossibleTrajectory it) {
+									cluster->vertices[v]->inserted = false;
+									trajectory = vehicle->trajectory;
+								}
 
-					for (int v = 0; v < cluster->vertices.size(); v++) {
-						if (cluster->vertices[v]->visited == false) {
-							cluster->vertices[v]->visited = true;
-							trajectory.push_back(&searchById(0));
-							nearestInsertion(trajectory, *cluster->vertices[v]);
-							try {
-								verifyTrajectory(trajectory);
-								swapOpt(trajectory);
-								twoOpt(trajectory);
-								trajectory.pop_back();
-								vehicle->trajectory = trajectory;
-								cluster->vertices[v]->inserted = true;
-								vehicle->position = vehicle->trajectory.back();
-							} catch (ImpossibleTrajectory it) {
-								cluster->vertices[v]->inserted = false;
-								trajectory = vehicle->trajectory;
 							}
-
 						}
+						
+						cluster->available = availability(*cluster);
 					}
-					
-					cluster->available = availability(*cluster);
 
 				}
 				vehicle->trajectory.push_back(&searchById(0));
@@ -544,7 +547,7 @@ class Graph {
 			vector<Node*> copy = trajectory;
 			for (int i = 1; i < trajectory.size(); i++) {
 				for (int j = i; j < trajectory.size()-1; j++) {
-					iter_swap(copy.begin()+i, copy.begin()+j);
+					swap(copy[i], copy[j]);
 					try {
 						verifyTrajectory(copy);
 						if (routingTime(copy) < routingTime(trajectory)) {
@@ -604,12 +607,20 @@ class Graph {
 			cout << "Total: " << total << endl << endl;
 		}
 
-		void myMaps() {
-			ofstream output(NAME+"(output).csv");
-			output << "id,lat,long,dem,p,cluster" << endl;
+		void toCSV() {
+			ofstream output("outputs/"+NAME+".csv");
+			output << "id,lat,long,dem,etw,ltw,p,d" << endl;
 			for (int i = 0; i < V.size(); i++) {
-				output << V[i].id << "," << V[i].lat << "," << V[i].lon << "," << V[i].dem << "," << V[i].p << "," << V[i].cluster << endl;
+				output << V[i].id << "," << V[i].lat << "," << V[i].lon << "," << V[i].dem << "," << V[i].timeWindow.first << "," << V[i].timeWindow.second << "," << V[i].p << "," << V[i].d << endl;
 			}
+		}
+
+		int totalRoutingTime() {
+			int total = 0;
+			for (int i = 0; i < M.size(); i++) {
+				total += routingTime(M[i].trajectory);
+			}
+			return total;
 		}
 
 };

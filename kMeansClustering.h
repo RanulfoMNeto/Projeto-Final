@@ -10,7 +10,7 @@ using namespace std;
 void kMeansClustering(vector<Node*> &points, int k) {
     int n = points.size(); // the number of nodes
     vector<int> rdm;
-    srand(time(0));  // need to set the random seed
+    //srand(time(0));  // need to set the random seed
     for (int i = 0; i < n; i++)
         rdm.push_back(i);
     random_shuffle(rdm.begin(), rdm.end(), myrandom);
